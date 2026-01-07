@@ -1,0 +1,197 @@
+================================================================================
+ENCODING REFERENCE KEY
+ML-Ready Dataset Encoding Guide
+Generated: 2025-12-11 10:53:56
+================================================================================
+
+--------------------------------------------------------------------------------
+SYMBOL ENCODING (5764 unique symbols)
+--------------------------------------------------------------------------------
+     0 = A
+     1 = AA
+     2 = AAL
+     3 = AAMI
+     4 = AAOI
+     5 = AAON
+     6 = AAP
+     7 = AAPL
+     8 = AAT
+     9 = AB
+    10 = ABBV
+    11 = ABCB
+    12 = ABCL
+    13 = ABEO
+    14 = ABFL
+    15 = ABG
+    16 = ABL
+    17 = ABLD
+    18 = ABLG
+    19 = ABLLL
+    20 = ABM
+    21 = ABNB
+    22 = ABOS
+    23 = ABOT
+    24 = ABP
+    25 = ABR
+    26 = ABR_E
+    27 = ABR_F
+    28 = ABSI
+    29 = ABT
+    30 = ABTC
+    31 = ABTS
+    32 = ABVC
+    33 = ABVX
+    34 = ABXB
+    35 = ACA
+    36 = ACAD
+    37 = ACB
+    38 = ACCD
+    39 = ACCO
+    40 = ACCS
+    41 = ACDC
+    42 = ACEL
+    43 = ACET
+    44 = ACGL
+    45 = ACGLN
+    46 = ACGLO
+    47 = ACGP
+    48 = ACGR
+    49 = ACHC
+  ... and 5714 more symbols
+
+--------------------------------------------------------------------------------
+QUARTER_PERIOD ENCODING (21 unique periods)
+--------------------------------------------------------------------------------
+   0 = after_q1_2020
+   1 = after_q1_2021
+   2 = after_q1_2022
+   3 = after_q1_2023
+   4 = after_q1_2024
+   5 = after_q2_2020
+   6 = after_q2_2021
+   7 = after_q2_2022
+   8 = after_q2_2023
+   9 = after_q2_2024
+  10 = after_q3_2020
+  11 = after_q3_2021
+  12 = after_q3_2022
+  13 = after_q3_2023
+  14 = after_q3_2024
+  15 = after_q4_2019
+  16 = after_q4_2020
+  17 = after_q4_2021
+  18 = after_q4_2022
+  19 = after_q4_2023
+  20 = after_q4_2024
+
+--------------------------------------------------------------------------------
+DATE ENCODING (buy_date and sell_date)
+--------------------------------------------------------------------------------
+  Method: Days since epoch (1970-01-01)
+  -1 = Missing or invalid date
+  Examples:
+    18278 = 2020-01-17
+    18376 = 2020-04-24
+
+--------------------------------------------------------------------------------
+INDUSTRY ENCODING (46 unique industries)
+--------------------------------------------------------------------------------
+   0 = Aerospace & Defense
+   1 = Airlines
+   2 = Auto Components
+   3 = Automobiles
+   4 = Banking
+   5 = Beverages
+   6 = Biotechnology
+   7 = Building
+   8 = Chemicals
+   9 = Commercial Services & Supplies
+  10 = Communications
+  11 = Construction
+  12 = Consumer products
+  13 = Distributors
+  14 = Diversified Consumer Services
+  15 = Electrical Equipment
+  16 = Energy
+  17 = Financial Services
+  18 = Food Products
+  19 = Health Care
+  20 = Hotels, Restaurants & Leisure
+  21 = Industrial Conglomerates
+  22 = Insurance
+  23 = Leisure Products
+  24 = Life Sciences Tools & Services
+  25 = Logistics & Transportation
+  26 = Machinery
+  27 = Marine
+  28 = Media
+  29 = Metals & Mining
+  30 = N/A
+  31 = Packaging
+  32 = Paper & Forest
+  33 = Pharmaceuticals
+  34 = Professional Services
+  35 = Real Estate
+  36 = Retail
+  37 = Road & Rail
+  38 = Semiconductors
+  39 = Technology
+  40 = Telecommunication
+  41 = Textiles, Apparel & Luxury Goods
+  42 = Tobacco
+  43 = Trading Companies & Distributors
+  44 = Transportation Infrastructure
+  45 = Utilities
+
+--------------------------------------------------------------------------------
+ADDITIONAL NOTES
+--------------------------------------------------------------------------------
+• All binary columns (above_*) are already numerical (0 or 1)
+• Missing values in numerical columns are encoded as -999
+• Missing values in max gain and max loss columns are encoded as NAN, this does not mean the data is missing, it means the final sell date occured before the corresponding xweek since buy date so no data exists
+• Column order is preserved from original dataset
+• Total rows: 32363
+• Total columns: 33
+
+--------------------------------------------------------------------------------
+COLUMN DATA TYPES
+--------------------------------------------------------------------------------
+  symbol_encoded                      : int64
+  quarter_period_encoded              : int64
+  buy_date_encoded                    : int64
+  sell_date_encoded                   : int64
+  weeks_after_earnings                : int64
+  price                               : float64
+  above_price_ma_1month               : int64
+  above_price_ma_2month               : int64
+  above_price_ma_3month               : int64
+  above_price_ma_6month               : int64
+  above_price_ma_1year                : int64
+  above_price_ma_5year                : int64
+  above_volume_ma_1month              : int64
+  above_volume_ma_2month              : int64
+  above_volume_ma_3month              : int64
+  above_volume_ma_6month              : int64
+  above_volume_ma_1year               : int64
+  above_volume_ma_5year               : int64
+  short_term_avg_pct_pct              : float64
+  short_term_num_tp_pct               : float64
+  short_term_avg_pct                  : float64
+  short_term_num_tp                   : int64
+  long_term_avg_pct_pct               : float64
+  long_term_num_tp_pct                : float64
+  long_term_avg_pct                   : float64
+  long_term_num_tp                    : int64
+  final_return_pct                    : float64
+  max_gain_pct                        : float64
+  max_loss_pct                        : float64
+  max_gain_before_max_loss            : int64
+  weeks_to_max_gain                   : float64
+  weeks_to_max_loss                   : float64
+  industry_encoded                    : int64
+  max_gain_xweek                      : float64
+  max_loss_xweek                      : float64
+  max_gain_before_max_loss_xweek      : int64
+  (x is replaced by the number of the corresponding week after the buy date)
+
+================================================================================

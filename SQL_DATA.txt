@@ -1,0 +1,197 @@
+PostgreSQL Data — Complete Column Reference for stocks_peaks_valleys_analysis 
+
+Total Columns: 27 
+
+ 
+
+📊 Base OHLCV Data (Every Trading Day) 
+
+Column 
+
+Description 
+
+id 
+
+Unique record identifier from the original stocks_ohlc table. 
+
+symbol 
+
+Stock ticker symbol (e.g., AAPL, TSLA). 
+
+date 
+
+Trading date for this record. 
+
+open 
+
+Opening price for the trading day. 
+
+high 
+
+Highest price reached during the trading day. 
+
+low 
+
+Lowest price reached during the trading day. 
+
+close 
+
+Closing price for the trading day (most important for analysis). 
+
+volume 
+
+Number of shares traded during the day. 
+
+ 
+
+🎯 Peak/Valley Identification 
+
+Column 
+
+Description 
+
+peak_valley_type 
+
+Values: 'PEAK', 'VALLEY', or NULL. 
+PEAK = Day when price stopped rising. 
+VALLEY = Day when price stopped falling. 
+NULL = Regular day (not a turning point). 
+
+ 
+
+📈 Previous Extreme Information 
+
+Column 
+
+Description 
+
+prev_extreme_date 
+
+Date of the previous peak or valley (only populated on extreme days). 
+
+prev_extreme_type 
+
+Type of the previous extreme — 'PEAK' or 'VALLEY'. 
+
+prev_extreme_price 
+
+Closing price at the previous extreme. 
+
+ 
+
+📊 Percentage Change Metrics 
+
+Column 
+
+Description 
+
+pct_change_from_prev_extreme 
+
+% change from the previous turning point to the current one (only on peak/valley days). 
+Example: Valley at $100 → Peak at $110 = +10.0%. 
+
+pct_change_from_last_extreme 
+
+% change from the most recent extreme to today’s close (populated daily). 
+Resets to 0.00 on the extreme day itself. 
+
+ 
+
+⏱️ Time Tracking Columns 
+
+Column 
+
+Description 
+
+days_since_prev_extreme 
+
+Number of trading days between consecutive turning points (only on peak/valley days). 
+
+days_since_last_extreme 
+
+Number of trading days since the most recent turning point (populated daily). 
+Resets to 0 on extreme days. 
+
+ 
+
+🤖 Binary Flags for Machine Learning (Every Day) 
+
+Column 
+
+Description 
+
+is_peak 
+
+1 if this day is a peak, otherwise 0. 
+
+is_valley 
+
+1 if this day is a valley, otherwise 0. 
+
+is_upward 
+
+1 if price rose from the previous day and it’s not a peak day. 
+
+is_downward 
+
+1 if price fell from the previous day and it’s not a valley day. 
+
+is_flat 
+
+1 if closing price was unchanged from previous day. 
+
+is_start 
+
+1 if this is the first day of data for the symbol (useful for filtering edge cases). 
+
+ 
+
+📉 Volatility Rolling Averages (Time-Based, Every Day) 
+
+These measure how volatile a stock has been recently by averaging the absolute % change between recent turning points. *** DOUBLE CHECK THESE WERE DEFINED IN TRADING DAYS***** 
+
+Column 
+
+Description 
+
+volatility_ma_1week 
+
+Average absolute % change between extremes over the past 5 trading days. 
+
+volatility_ma_1month 
+
+Average absolute % change between extremes over the past 21 trading days (~1 month). 
+
+volatility_ma_2month 
+
+Average absolute % change between extremes over the past 60 trading days (~2 months). 
+
+volatility_ma_3month 
+
+Average absolute % change between extremes over the past 90 trading days (~1 quarter). 
+
+volatility_ma_4month 
+
+Average absolute % change between extremes over the past 120 trading days (~4 months). 
+
+Notes on Volatility Averages: 
+
+All values are absolute (always positive). 
+
+Only averages the pct_change_from_prev_extreme values (turning point to turning point). 
+
+Time windows are calendar-based, not trading-day-based. 
+
+NULL if no extremes exist in the window. 
+
+Higher = more volatile; lower = more stable. 
+
+ 
+
+Additional Reference Tables 
+
+stocks_price_rolling_averages view: 
+price_ma_1month, price_ma_2month, price_ma_3month, price_ma_6month, price_ma_1year, price_ma_5year 
+
+stocks_volume_rolling_averages view: 
+Same as above, but with volume_ma_... columns. 
