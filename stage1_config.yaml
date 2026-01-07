@@ -1,0 +1,236 @@
+# ===================================================================
+# STAGE 1 CONFIGURATION - EXHAUSTIVE SL/TP/HP GRID SEARCH
+# ===================================================================
+# This configuration controls the exhaustive grid search for finding
+# optimal Stop Loss, Target Profit, and Holding Period combinations.
+# ===================================================================
+
+# -------------------------------------------------------------------
+# DATA PATHS
+# -------------------------------------------------------------------
+data:
+  # Path to ML-ready CSV file with weekly metrics
+  # IMPACT: This is the source data for all backtesting
+  input_csv: "C:\\Users\\sahil\\Downloads\\EarningsTool\\TurningPointAnalysis\\DualPercentileStrategy\\2020_2025_DualPercentileResults_ML_Ready_WithWeeklyMetrics.csv"
+
+  # Path to encoding reference file (for decoding symbols, industries, etc.)
+  # IMPACT: Used for human-readable reporting (optional)
+  encoding_reference: "C:\\Users\\sahil\\Downloads\\EarningsTool\\TurningPointAnalysis\\DualPercentileStrategy\\2020_2025_DualPercentileResults_Encoding_Reference.txt"
+
+  # Output directory for all Stage 1 results
+  # IMPACT: All CSV files and logs will be saved here
+  output_dir: "C:\\Users\\sahil\\Downloads\\EarningsTool\\TurningPointAnalysis\\DualPercentileStrategy\\StopLossTargetProfit\\TargetProfitSearch\\DualPercentilePipeline"
+
+# -------------------------------------------------------------------
+# GRID SEARCH PARAMETERS
+# -------------------------------------------------------------------
+grid_search:
+  # Target Profit Grid (in percentage points)
+  # IMPACT: Tests all profit target values from start to end by step
+  # Units: Percentage points (e.g., 5.0 = 5%)
+  target_profit:
+    start: 0.05      # Minimum profit target to test (0.05%)
+    end: 15.05       # Maximum profit target to test (15.05%)
+    step: 0.1        # Increment size (0.1% steps)
+    # Total combinations: (15.05 - 0.05) / 0.1 + 1 = 151 values
+
+  # Stop Loss Grid (in percentage points, entered as positive values)
+  # IMPACT: Tests all stop loss values from start to end by step
+  # Units: Percentage points as positive values (e.g., 3.0 = -3% stop loss)
+  # NOTE: Values will be converted to negative when applied
+  stop_loss:
+    start: 0.05      # Minimum stop loss to test (0.05% = -0.05% loss)
+    end: 10.05       # Maximum stop loss to test (10.05% = -10.05% loss)
+    step: 0.1        # Increment size (0.1% steps)
+    # Total combinations: (10.05 - 0.05) / 0.1 + 1 = 101 values
+
+  # Holding Period Grid (in weeks)
+  # IMPACT: Tests all holding periods from start to end by step
+  # Units: Weeks
+  holding_period:
+    start: 1         # Minimum holding period (1 week)
+    end: 21          # Maximum holding period (21 weeks)
+    step: 1          # Increment size (1 week steps)
+    # Total combinations: (21 - 1) / 1 + 1 = 21 values
+
+  # Total grid combinations: 151 × 101 × 21 = 320,271 strategies to test
+
+# -------------------------------------------------------------------
+# MINIMUM TRADE FILTER
+# -------------------------------------------------------------------
+filtering:
+  # Minimum number of trades required for a strategy to be considered
+  # IMPACT: Strategies with fewer trades are filtered out before metrics calculation
+  # Units: Number of trades
+  # Rationale: Statistical significance - too few trades = unreliable metrics
+  min_trades: 500
+
+  # IMPORTANT: When you run the script, it checks if Stage1TotalResults{min_trades}.csv exists
+  # If it exists with the SAME min_trades value, it will skip the grid search and use existing results
+  # If min_trades is different, it will re-run the entire grid search
+
+# -------------------------------------------------------------------
+# STRATEGY QUALITY FILTERS (Applied to Stage1TotalResults)
+# -------------------------------------------------------------------
+quality_filters:
+  # Minimum Expectancy (average return per trade)
+  # IMPACT: Only strategies with expectancy > this value pass to top_candidates
+  # Units: Decimal (0.0025 = 0.25%)
+  # Rationale: Ensures positive edge after accounting for variation
+  min_expectancy: 0.0025
+
+  # Minimum Confidence Interval Lower Bound (bootstrap 5th percentile of expectancy)
+  # IMPACT: Only strategies where CI lower bound > this value pass
+  # Units: Decimal (0.0 = 0%)
+  # Rationale: Ensures expectancy is statistically significant (95% confident edge is positive)
+  min_ci_lower: 0.0
+
+  # Minimum Profit Factor (gross profit / gross loss)
+  # IMPACT: Only strategies with profit factor > this value pass
+  # Units: Ratio (1.2 = earn $1.20 for every $1.00 lost)
+  # Rationale: Ensures efficient capital usage
+  min_profit_factor: 1.2
+
+  # Minimum Win Rate (percentage of winning trades)
+  # IMPACT: Only strategies with win rate > this value pass
+  # Units: Decimal (0.3 = 30%)
+  # Rationale: Ensures strategy wins often enough to be psychologically tradeable
+  min_win_rate: 0.3
+
+  # Minimum Average Win / Average Loss Ratio
+  # IMPACT: Not currently implemented - set to NaN to disable
+  # Units: Ratio (e.g., 2.0 = average win is 2x average loss)
+  # Future use: Filter for asymmetric payoff strategies
+  min_avg_win_loss_ratio: .nan  # NaN = disabled, does not filter anything
+
+# -------------------------------------------------------------------
+# BOOTSTRAP CONFIDENCE INTERVAL SETTINGS
+# -------------------------------------------------------------------
+bootstrap:
+  # Number of bootstrap resampling iterations
+  # IMPACT: More iterations = more accurate CI estimates but slower computation
+  # Units: Integer count
+  # Rationale: 5000 is standard for publication-quality research
+  n_iterations: 5000
+
+  # Confidence level for interval
+  # IMPACT: Determines the percentile range for CI
+  # Units: Decimal (0.95 = 95% confidence interval)
+  # Calculation: CI = [5th percentile, 95th percentile] of bootstrap distribution
+  confidence_level: 0.95
+
+  # Random seed for reproducibility
+  # IMPACT: Ensures same bootstrap samples across runs
+  # Units: Integer seed
+  random_seed: 42
+
+# -------------------------------------------------------------------
+# PERFORMANCE SETTINGS
+# -------------------------------------------------------------------
+performance:
+  # Enable parallel processing
+  # IMPACT: Uses all CPU cores to speed up grid search
+  # True = parallel, False = sequential (slower but easier to debug)
+  use_multiprocessing: true
+
+  # Number of CPU cores to use
+  # IMPACT: Controls how many parallel workers
+  # -1 = use all available cores
+  # -2 = use all cores except 1 (recommended to keep system responsive)
+  # Positive integer = use exactly that many cores
+  n_jobs: -1
+
+  # Chunk size for parallel processing
+  # IMPACT: Number of strategies processed per worker batch
+  # Larger chunks = less overhead but less granular progress
+  # Smaller chunks = more overhead but better load balancing
+  chunk_size: 1000
+
+  # Progress bar update frequency
+  # IMPACT: How often to update progress messages
+  # Units: Number of strategies between updates
+  progress_update_frequency: 5000
+
+# -------------------------------------------------------------------
+# LOGGING SETTINGS
+# -------------------------------------------------------------------
+logging:
+  # Log level
+  # IMPACT: Controls verbosity of log messages
+  # Options: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  # Recommendation: INFO for normal runs, DEBUG for troubleshooting
+  log_level: INFO
+
+  # Log file path
+  # IMPACT: Where to save detailed execution logs
+  # {output_dir} will be replaced with the output directory path
+  log_file: "{output_dir}/stage1_execution.log"
+
+  # Log to console
+  # IMPACT: Whether to print log messages to terminal
+  log_to_console: true
+
+  # Log format
+  # IMPACT: Format string for log messages
+  log_format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+  # Date format
+  # IMPACT: Format for timestamps in logs
+  date_format: "%Y-%m-%d %H:%M:%S"
+
+# -------------------------------------------------------------------
+# OUTPUT FILES
+# -------------------------------------------------------------------
+output:
+  # Total results file (all strategies with min_trades or more)
+  # IMPACT: Contains all strategies that pass minimum trade filter with full metrics
+  # File naming: Stage1TotalResults{min_trades}.csv
+  # Example: Stage1TotalResults500.csv if min_trades = 500
+  total_results_file: "Stage1TotalResults{min_trades}.csv"
+
+  # Top candidates file (strategies passing quality filters)
+  # IMPACT: Contains only strategies that meet all quality filter criteria
+  # Ranked by expectancy (highest first)
+  top_candidates_file: "Stage1_top_candidates.csv"
+
+  # Include these columns in output CSVs
+  # IMPACT: Controls what information is saved
+  output_columns:
+    - target_profit_pct      # Target profit threshold (%)
+    - stop_loss_pct          # Stop loss threshold (%)
+    - holding_period_weeks   # Holding period (weeks)
+    - trade_count            # Total number of trades
+    - expectancy             # Average return per trade
+    - win_rate               # Percentage of winning trades
+    - avg_win                # Average return of winning trades
+    - avg_loss               # Average return of losing trades (absolute value)
+    - avg_win_loss_ratio     # avg_win / avg_loss
+    - profit_factor          # Gross profit / gross loss
+    - ci_lower               # Bootstrap CI lower bound (5th percentile)
+    - ci_upper               # Bootstrap CI upper bound (95th percentile)
+    - total_return           # Sum of all returns
+    - max_drawdown           # Maximum drawdown experienced
+    - sharpe_ratio           # Risk-adjusted return metric
+
+# -------------------------------------------------------------------
+# MISSING DATA HANDLING
+# -------------------------------------------------------------------
+data_handling:
+  # How to handle rows with missing weekly data
+  # IMPACT: Determines which rows are included in strategy evaluation
+  # 'skip': Skip rows where max_gain_Xweek or max_loss_Xweek is NaN for current holding period
+  # 'forward_fill': Use last available week's data (NOT RECOMMENDED - introduces bias)
+  # Recommendation: Always use 'skip' to maintain data integrity
+  missing_weekly_data: skip
+
+  # NaN value representation in CSV
+  # IMPACT: What value indicates missing data
+  # Per encoding reference: "Missing values in max gain and max loss columns are encoded as NAN"
+  # Note: pandas.read_csv() automatically converts 'NaN', 'nan', 'NA', etc. to np.nan
+  nan_representation: NaN
+
+  # Validate data before processing
+  # IMPACT: Runs data quality checks before grid search
+  # Checks: column existence, data types, missing value patterns
+  # Recommendation: Keep true for first run, can disable for repeat runs
+  validate_data: true

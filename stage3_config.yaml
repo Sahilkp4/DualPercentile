@@ -1,0 +1,235 @@
+# ===================================================================
+# STAGE 3 CONFIGURATION - THRESHOLD DISCOVERY WITH TEMPORAL INTEGRITY
+# ===================================================================
+#
+# This configuration controls Stage 3 threshold discovery pipeline.
+# Stage 3 identifies minimum price and buy_volume thresholds for each
+# Stage 2 strategy using:
+# - Per-strategy quantile-based threshold candidates
+# - Anchored walk-forward OOS validation (same as Stage 2)
+# - Block bootstrap hypothesis testing
+# - BH-FDR correction across strategies (NOT within folds)
+# - Direction-specific harm testing (below threshold is bad)
+
+# -------------------------------------------------------------------
+# DATA PATHS
+# -------------------------------------------------------------------
+data:
+  # Raw dataset (same as Stage 1/2 input)
+  input_csv: "C:\\Users\\sahil\\Downloads\\EarningsTool\\TurningPointAnalysis\\DualPercentileStrategy\\2020_2025_DualPercentileResults_ML_Ready_WithWeeklyMetrics.csv"
+
+  # Stage 2 output (required for feature filtering)
+  stage2_optimal_features_csv: "C:\\Users\\sahil\\Downloads\\EarningsTool\\TurningPointAnalysis\\DualPercentileStrategy\\StopLossTargetProfit\\TargetProfitSearch\\DualPercentilePipeline\\Stage2_optimal_features_per_strategy.csv"
+
+  # Output directory for Stage 3 results
+  output_dir: "C:\\Users\\sahil\\Downloads\\EarningsTool\\TurningPointAnalysis\\DualPercentileStrategy\\StopLossTargetProfit\\TargetProfitSearch\\DualPercentilePipeline"
+
+# -------------------------------------------------------------------
+# VARIABLES TO THRESHOLD
+# -------------------------------------------------------------------
+threshold_variables:
+  # List of continuous variables to discover minimum thresholds for
+  variables:
+    - price
+    - buy_volume
+
+  # Minimum allowable threshold values (floor constraints)
+  # Set to 0 to allow any positive value
+  price_floor: 0.0
+  buy_volume_floor: 0.0
+
+  # Missing value encoding (rows with these values will be filtered out)
+  # -999 indicates missing data in the dataset
+  missing_value_code: -999
+
+# -------------------------------------------------------------------
+# STAGE 2 FILTER CRITERIA (which strategies to test)
+# -------------------------------------------------------------------
+stage2_filter:
+  # Only test strategies meeting ALL these criteria from Stage2 output
+  min_features_selected: 1         # n_features_selected > 0
+  require_viable: true             # is_viable = True
+  require_positive_delta: true     # delta_vs_stage1 > 0
+
+# -------------------------------------------------------------------
+# BINARY FEATURES (same as Stage 2 - needed for feature filtering)
+# -------------------------------------------------------------------
+# These are used to apply Stage2's selected features
+binary_features:
+  - above_price_ma_1month
+  - above_price_ma_2month
+  - above_price_ma_3month
+  - above_price_ma_6month
+  - above_price_ma_1year
+  - above_price_ma_5year
+  - above_volume_ma_1month
+  - above_volume_ma_2month
+  - above_volume_ma_3month
+  - above_volume_ma_6month
+  - above_volume_ma_1year
+  - above_volume_ma_5year
+
+# -------------------------------------------------------------------
+# TIME INTEGRITY (SAME AS STAGE 2 - critical for preventing data leakage)
+# -------------------------------------------------------------------
+time_integrity:
+  # Column used for temporal fold grouping (quarters)
+  fold_group_col: quarter_period_encoded
+
+  # Column used for block bootstrap (buy dates)
+  bootstrap_block_col: buy_date_encoded
+
+  # Number of anchored walk-forward folds
+  n_folds: 10
+
+  # Quarters per test window
+  test_span_quarters: 1
+
+  # Action when insufficient folds available
+  # "reduce" = pass strategy as long as it meets minimum fold requirement
+  # "skip" = skip strategy if even one fold is ineligible
+  on_insufficient_folds: "reduce"
+
+# -------------------------------------------------------------------
+# FOLD MINIMUMS (SAME AS STAGE 2 - power safeguards)
+# -------------------------------------------------------------------
+fold_minimums:
+  # Minimum trades in training fold to evaluate thresholds
+  min_fold_trades_train: 300
+
+  # Minimum trades in test fold for OOS evaluation
+  min_fold_trades_test: 80
+
+  # Minimum eligible folds required for strategy to proceed
+  min_strategy_eligible_folds: 6
+
+# -------------------------------------------------------------------
+# THRESHOLD SUBSET MINIMUMS (NEW - ensures symmetric sample sizes)
+# -------------------------------------------------------------------
+threshold_subset_minimums:
+  # Minimum trades below threshold in train (will be filtered out)
+  # This ensures we have enough data to estimate harm
+  min_trades_below_threshold_train: 120
+
+  # Minimum trades above threshold in train (remain after filter)
+  # This ensures filtered dataset is still viable
+  min_trades_above_threshold_train: 120
+
+  # Minimum trades below threshold in test
+  min_trades_below_threshold_test: 50
+
+  # Minimum trades above threshold in test
+  min_trades_above_threshold_test: 50
+
+  # Minimum folds where a threshold must be evaluable
+  # Threshold must meet subset minimums in at least this many folds
+  min_eligible_folds_threshold: 4
+
+# -------------------------------------------------------------------
+# CANDIDATE THRESHOLD GRID (NEW - per-strategy quantiles)
+# -------------------------------------------------------------------
+candidate_thresholds:
+  # Quantiles to test (applied to each strategy's distribution separately)
+  # These are intentionally conservative (0-30%) to avoid over-filtering
+  # Per-strategy quantiles adapt to each strategy's price/volume characteristics
+  candidate_quantiles:
+    - 0.00   # No filter baseline
+    - 0.02
+    - 0.04
+    - 0.06
+    - 0.08
+    - 0.10
+    - 0.12
+    - 0.14
+    - 0.16
+    - 0.18
+    - 0.20
+    - 0.22
+    - 0.24
+    - 0.26
+    - 0.28
+    - 0.30
+
+  # Maximum allowable filter rate (fraction of trades removed)
+  # Prevents removing too much data (e.g., don't remove >40% of trades)
+  max_filter_rate: 0.40
+
+# -------------------------------------------------------------------
+# OOS VALIDATION GATE (direction-specific)
+# -------------------------------------------------------------------
+oos_validation:
+  # Minimum fraction of eligible folds where OOS delta_E must pass
+  oos_min_pass_rate: 0.60
+
+  # Minimum delta expectancy threshold for economic significance
+  # delta_E = E_above - E_below (positive means above is better)
+  min_delta_expectancy: 0.001
+
+  # Direction of harm test
+  # "below_is_bad" means we expect trades below threshold to be harmful
+  direction: "below_is_bad"
+
+# -------------------------------------------------------------------
+# BOOTSTRAP SETTINGS (SAME AS STAGE 2)
+# -------------------------------------------------------------------
+bootstrap:
+  # Number of bootstrap iterations for hypothesis testing
+  bootstrap_iters: 3000
+
+  # Confidence interval percentiles
+  bootstrap_ci_low: 5
+  bootstrap_ci_high: 95
+
+  # Random seed for reproducibility
+  random_seed: 42
+
+# -------------------------------------------------------------------
+# FDR CORRECTION (applied across strategies, NOT within folds)
+# -------------------------------------------------------------------
+fdr:
+  # Benjamini-Hochberg FDR q-value threshold
+  # Separate correction for each variable (price, buy_volume)
+  # Applied across all strategy-level tests
+  fdr_q_threshold: 0.10
+
+# -------------------------------------------------------------------
+# PERFORMANCE SETTINGS (SAME AS STAGE 2)
+# -------------------------------------------------------------------
+performance:
+  # Enable multiprocessing for strategy-level parallelization
+  use_multiprocessing: true
+
+  # Number of parallel jobs (-1 = use all CPU cores)
+  n_jobs: -1
+
+  # Number of strategies to process in each batch
+  strategy_chunk_size: 50
+
+# -------------------------------------------------------------------
+# LOGGING CONFIGURATION (SAME AS STAGE 2)
+# -------------------------------------------------------------------
+logging:
+  # Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  log_level: INFO
+
+  # Log file path
+  log_file: "{output_dir}/stage3_execution.log"
+
+  # Also log to console
+  log_to_console: true
+
+  # Log message format
+  log_format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+  # Date format in log messages
+  date_format: "%Y-%m-%d %H:%M:%S"
+
+# -------------------------------------------------------------------
+# OUTPUT FILES
+# -------------------------------------------------------------------
+output:
+  # CSV containing optimal thresholds for each strategy
+  optimal_thresholds_file: "Stage3_optimal_price_volume_per_strategy.csv"
+
+  # CSV containing diagnostic audit trail for all threshold tests
+  diagnostics_file: "Stage3_price_volume_diagnostics.csv"

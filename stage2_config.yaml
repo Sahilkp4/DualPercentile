@@ -1,0 +1,200 @@
+# ===================================================================
+# STAGE 2 CONFIGURATION - FEATURE SELECTION WITH TEMPORAL INTEGRITY
+# ===================================================================
+#
+# This configuration file controls all parameters for Stage 2 feature
+# selection pipeline. Stage 2 identifies essential binary features for
+# each Stage 1 trading strategy using:
+# - Anchored walk-forward OOS validation
+# - Block bootstrap hypothesis testing
+# - BH-FDR correction within each fold
+# - Directed harm testing for interaction effects
+# - Average harm pruning for conflict resolution
+
+# -------------------------------------------------------------------
+# DATA PATHS
+# -------------------------------------------------------------------
+data:
+  # Raw dataset (same as Stage 1 input)
+  input_csv: "C:\\Users\\sahil\\Downloads\\EarningsTool\\TurningPointAnalysis\\DualPercentileStrategy\\2020_2025_DualPercentileResults_ML_Ready_WithWeeklyMetrics.csv"
+
+  # Stage 1 output (top candidate strategies to analyze)
+  stage1_candidates_csv: "C:\\Users\\sahil\\Downloads\\EarningsTool\\TurningPointAnalysis\\DualPercentileStrategy\\StopLossTargetProfit\\TargetProfitSearch\\DualPercentilePipeline\\Stage1_top_candidates.csv"
+
+  # Output directory for Stage 2 results
+  output_dir: "C:\\Users\\sahil\\Downloads\\EarningsTool\\TurningPointAnalysis\\DualPercentileStrategy\\StopLossTargetProfit\\TargetProfitSearch\\DualPercentilePipeline"
+
+# -------------------------------------------------------------------
+# BINARY FEATURES (explicit list of all 12)
+# -------------------------------------------------------------------
+# These are the features to test in univariate screening
+# All must be binary (0/1) columns in the dataset
+binary_features:
+  - above_price_ma_1month      # Price above 1-month moving average
+  - above_price_ma_2month      # Price above 2-month moving average
+  - above_price_ma_3month      # Price above 3-month moving average
+  - above_price_ma_6month      # Price above 6-month moving average
+  - above_price_ma_1year       # Price above 1-year moving average
+  - above_price_ma_5year       # Price above 5-year moving average
+  - above_volume_ma_1month     # Volume above 1-month moving average
+  - above_volume_ma_2month     # Volume above 2-month moving average
+  - above_volume_ma_3month     # Volume above 3-month moving average
+  - above_volume_ma_6month     # Volume above 6-month moving average
+  - above_volume_ma_1year      # Volume above 1-year moving average
+  - above_volume_ma_5year      # Volume above 5-year moving average
+
+# -------------------------------------------------------------------
+# TIME INTEGRITY (critical for preventing data leakage)
+# -------------------------------------------------------------------
+time_integrity:
+  # Column used for temporal fold grouping (quarters)
+  fold_group_col: quarter_period_encoded
+
+  # Column used for block bootstrap (buy dates)
+  bootstrap_block_col: buy_date_encoded
+
+  # Number of anchored walk-forward folds
+  # Last n_folds quarters will be used as test sets
+  n_folds: 10
+
+  # Quarters per test window
+  test_span_quarters: 1
+
+  # Action when insufficient folds available: "skip" which skips strategy if even one fold is ineligible, or "reduce" which passes strategy as long as it meets mimimum fold requirment 
+  on_insufficient_folds: "reduce"
+
+# -------------------------------------------------------------------
+# FOLD MINIMUMS (power safeguards)
+# -------------------------------------------------------------------
+fold_minimums:
+  # Minimum trades in training fold to evaluate features
+  # Lower values = more statistical noise, higher false positives
+  min_fold_trades_train: 300
+
+  # Minimum trades in test fold for OOS evaluation
+  # Lower values = unreliable OOS estimates
+  min_fold_trades_test: 80
+
+  # Minimum eligible folds required for strategy to proceed
+  # Strategy must have at least this many folds meeting train/test minimums
+  min_strategy_eligible_folds: 6
+
+# -------------------------------------------------------------------
+# FEATURE SUBSET MINIMUMS (symmetry for 0/1)
+# -------------------------------------------------------------------
+feature_subset_minimums:
+  # Minimum trades in train where feature condition is true
+  # E.g., min trades where above_price_ma_1month == 1
+  min_trades_feature_subset_train: 120
+
+  # Minimum trades in test where feature condition is true
+  min_trades_feature_subset_test: 50
+
+  # Minimum folds where a feature-condition must be evaluable
+  # Feature-condition must meet subset minimums in at least this many folds
+  min_eligible_folds_feature: 4
+
+# -------------------------------------------------------------------
+# OOS VALIDATION GATE
+# -------------------------------------------------------------------
+oos_validation:
+  # Minimum fraction of eligible folds where OOS delta_E > threshold must pass
+  # Example: 0.60 means feature must show positive OOS effect in 60% of folds
+  oos_min_pass_rate: 0.60
+
+  # Minimum delta expectancy threshold for economic significance
+  # Example: 0.001 = 0.1% improvement per trade minimum
+  min_delta_expectancy: 0.001
+
+# -------------------------------------------------------------------
+# BOOTSTRAP SETTINGS
+# -------------------------------------------------------------------
+bootstrap:
+  # Number of bootstrap iterations for hypothesis testing
+  # 5000 = publication-quality statistical rigor
+  bootstrap_iters: 3000
+
+  # Confidence interval lower percentile
+  bootstrap_ci_low: 5
+
+  # Confidence interval upper percentile
+  bootstrap_ci_high: 95
+
+  # Random seed for reproducibility
+  random_seed: 42
+
+# -------------------------------------------------------------------
+# FDR CORRECTION (multiple testing control)
+# -------------------------------------------------------------------
+fdr:
+  # Benjamini-Hochberg FDR q-value for univariate feature screening
+  # Controls false discovery rate across all feature tests within a fold
+  fdr_q_univariate: 0.10
+
+  # Benjamini-Hochberg FDR q-value for interaction harm testing
+  # Controls false discovery rate across all pair tests within a fold
+  fdr_q_interactions: 0.05
+
+# -------------------------------------------------------------------
+# INTERACTION HARM TESTING
+# -------------------------------------------------------------------
+interactions:
+  # Minimum trades for pair subset (A ∧ B) in train to test harm
+  # Lower values = false conflict detections due to small samples
+  min_trades_pair_subset_train: 80
+
+  # Require CI high < 0 for harm edge declaration
+  # true = more conservative (only declare harm if confident)
+  interaction_require_ci_high_lt_0: true
+
+# -------------------------------------------------------------------
+# FINAL VIABILITY CHECK
+# -------------------------------------------------------------------
+final_viability:
+  # Minimum trades in final filtered dataset (all features applied)
+  # If fewer trades remain, feature set is deemed untradeable
+  min_trades_final_filter: 120
+
+# -------------------------------------------------------------------
+# PERFORMANCE SETTINGS
+# -------------------------------------------------------------------
+performance:
+  # Enable multiprocessing for strategy-level parallelization
+  use_multiprocessing: true
+
+  # Number of parallel jobs (-1 = use all CPU cores)
+  n_jobs: -1
+
+  # Number of strategies to process in each batch
+  # Larger = better parallelization, more memory usage
+  strategy_chunk_size: 100
+
+# -------------------------------------------------------------------
+# LOGGING CONFIGURATION
+# -------------------------------------------------------------------
+logging:
+  # Log level: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  # INFO recommended for production, DEBUG for troubleshooting
+  log_level: INFO
+
+  # Log file path ({output_dir} will be replaced with actual path)
+  log_file: "{output_dir}/stage2_execution.log"
+
+  # Also log to console (in addition to file)
+  log_to_console: true
+
+  # Log message format
+  log_format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+
+  # Date format in log messages
+  date_format: "%Y-%m-%d %H:%M:%S"
+
+# -------------------------------------------------------------------
+# OUTPUT FILES
+# -------------------------------------------------------------------
+output:
+  # CSV containing optimal feature set for each strategy
+  optimal_features_file: "Stage2_optimal_features_per_strategy.csv"
+
+  # CSV containing diagnostic audit trail for all feature tests
+  diagnostics_file: "Stage2_feature_diagnostics.csv"
