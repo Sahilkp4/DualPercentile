@@ -15,6 +15,7 @@ Note: Uses hardcoded test weeks. Each week processes ~5000 stocks and takes 10-1
 import psycopg2
 import pandas as pd
 import numpy as np
+import os
 from datetime import datetime, timedelta
 from typing import Dict, List, Tuple, Optional
 import warnings
@@ -31,7 +32,8 @@ warnings.filterwarnings('ignore')
 DB_CONFIG = {
     'dbname': 'daily_ohlcv_data',
     'user': 'postgres',
-    'password': 'Moopeyman4!',
+    # 'password': '<REMOVED — use environment variable>',  # SECURITY: Hardcoded password removed
+    'password': os.getenv('DB_PASSWORD', ''),
     'host': 'localhost',
     'port': 5432
 }
