@@ -47,7 +47,8 @@ _TRADING_DATES_CACHE = {}
 DB_CONFIG = {
     'dbname': 'daily_ohlcv_data',
     'user': 'postgres',
-    'password': 'Moopeyman4!',
+    # 'password': '<REMOVED — use environment variable>',  # SECURITY: Hardcoded password removed
+    'password': os.getenv('DB_PASSWORD', ''),
     'host': 'localhost',
     'port': 5432
 }
